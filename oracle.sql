@@ -66,3 +66,9 @@ SELECT empno 사원번호, ename 사원이름, sal 월급, sal*12 연봉 FROM emp;
 SELECT DISTINCT(job) FROM emp;
 
 WHERE절 사용: 조건 체크 결과 행 제한하기
+             (주의) 알리아스를 사용할 수 없음
+SELECT * FROM emp WHERE deptno=10;
+SELECT ename, job, deptno FROM emp WHERE ename = 'SMITH';
+SELECT * FROM emp WHERE hiredate > '81-12-03';
+SELECT * FROM emp WHERE hiredate < '81/12/03';
+
