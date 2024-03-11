@@ -71,4 +71,35 @@ SELECT * FROM emp WHERE deptno=10;
 SELECT ename, job, deptno FROM emp WHERE ename = 'SMITH';
 SELECT * FROM emp WHERE hiredate > '81-12-03';
 SELECT * FROM emp WHERE hiredate < '81/12/03';
+(주의) WHERE절에서는 알리아스를 사용할 수 없음
+SELECT ename, sal, sal*12 ansal FROM emp WHERE sal*12 > 15000;
 
+SELECT * FROM emp WHERE hiredate != '80/12/17';
+SELECT * FROM emp WHERE hiredate <> '80/12/17';
+SELECT * FROM emp WHERE hiredate ^= '80/12/17';
+
+SELECT * FROM emp WHERE sal > 2000 AND sal <= 5000;
+SELECT * FROM emp WHERE sal >= 800 AND sal <= 3000;
+
+BETWEEN ... AND ... : 두 값 사이(지정한 값 포함)
+SELECT * FROM emp WHERE sal BETWEEN 800 AND 3000; 
+SELECT * FROM emp WHERE sal NOT BETWEEN 800 AND 3000;
+SELECT * FROM emp WHERE ename BETWEEN 'KING' AND 'SMITH';
+SELECT * FROM emp WHERE ename NOT BETWEEN 'KING' AND 'SMITH';
+
+IN: 값 목록 중의 값과 일치
+SELECT * FROM emp WHERE sal IN (1300, 2450, 3000);
+SELECT * FROM emp WHERE sal NOT IN (1300, 2450, 3000);
+SELECT ename, mgr, deptno FROM emp WHERE ename IN ('ALLEN', 'FORD');
+SELECT ename, mgr, deptno FROM emp WHERE ename NOT IN ('ALLEN', 'FORT');
+
+[실습]
+1.emp 테이블에서 사원번호가 7698인 사원의 이름, 업무, 급여를 출력하시오.
+2.emp 테이블에서 사원이름이 SMITH인 사람의 이름, 월급, 부서번호를 구하시오.
+3.월급이 2500 이상 3500 미만인 사원의 이름, 입사일, 월급을 구하시오.
+4.급여가 2000에서 3000 사이에 포함되지 않는 사원의 이름, 업무, 급여를 출력하시오.
+
+SELECT ename, job, sal FROM emp WHERE empno = 7698;
+SELECT ename, sal, deptno FROM emp WHERE ename = 'SMITH';
+SELECT ename, hiredate, sal FROM emp WHERE sal >= 2500 AND sal < 3500;
+SELECT ename, job, sal FROM emp WHERE sal NOT BETWEEN 2000 AND 3000;
