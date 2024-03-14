@@ -613,3 +613,233 @@ SELECT e.ename 사원이름, m.ename 관리자이름 FROM emp e, emp m WHERE e.mgr = m.em
 SELECT DISTINCT(e.deptno), d.deptno FROM emp e, dept d WHERE e.deptno(+)=d.deptno;
 
 SELECT e.ename 사원이름, m.ename 관리자이름 FROM emp e, emp m WHERE e.mgr=m.empno(+);
+
+[실습문제]
+1.모든 사원의 이름, 부서번호, 부서이름을 표시하시오.(emp, dept)
+2.업무가 MANAGER인 사원의 정보를 이름, 업무, 부서명, 근무지 순으로 출력하시오.(emp, dept)
+3.커미션을 받고 급여가 1,600이상인사원의 사원이름, 급여, 부서명, 근무지를 출력하시오.
+
+SELECT e.ename, d.deptno, d.dname FROM emp e, dept d WHERE e.deptno=d.deptno;
+SELECT e.ename, e.job, d.dname, d.loc FROM emp e, dept d WHERE e.deptno=d.deptno AND e.job='MANAGER';
+SELECT e.ename, e.sal, d.dname, d.loc FROM emp e, dept d WHERE e.deptno=d.deptno AND e.comm IS NOT NULL AND e.sal >= 1600;
+
+4.근무지가 CHICAGO인 모든 사원의 이름, 업무, 부서번호 및 부서이름을 표시하시오.
+5.근무지별로 근무하는 사원의 수가 5명 이하인 경우, 인원이 적은 도시 순으로 정렬하시오.
+ (근무 인원이 0명인 곳도 표시)
+6.사원의 이름 및 사원 번호를 관리자의 이름과 관리자 번호와 함께 표시하고 각각의 열 레이블은
+ employee, emp#, manager, mgr#로 지정하시오. (관리자가 없는 사원 미출력)
+7.관리자보다 먼저 입사한 모든 사원의 이름 및 입사일을 관리자의 이름 및 입사일과 함께 표시하고
+ 열 레이블을 각각 employee emp hired, manager, mgr hired로 지정하시오.
+ (관리자가 없는 사원 미출력)
+ 
+ SELECT e.ename, e.job, d.deptno, d.dname FROM emp e, dept d WHERE e.deptno=d.deptno AND d.loc = 'CHICAGO';
+ SELECT d.loc, COUNT(e.empno) members FROM emp e, dept d WHERE e.deptno(+)=d.deptno GROUP BY d.loc HAVING COUNT(d.loc) < 5 ORDER BY members;
+ SELECT e.ename employee, e.empno "emp#", m.ename manager, e.mgr "mgr#" FROM emp e, emp m WHERE e.mgr=m.empno;
+ SELECT e.ename employee, e.hiredate "emp hired", m.ename manager, m.hiredate "mgr hired" FROM emp e, emp m WHERE e.mgr=m.empno AND e.hiredate < m.hiredate;
+  
+[표준 SQL]
+내부 조인(Inner Join)
+SELECT emp.ename, dept.deptno FROM emp INNER JOIN dept ON emp.deptno=dept.deptno;
+
+SELECT emp.ename, dept.deptno FROM emp JOIN dept ON emp.deptno=dept.deptno;
+
+SELECT e.ename, d.dname FROM emp e JOIN dept d ON e.deptno=d.deptno;
+
+두 개 테이블의 공통 컬럼은 알리아스를 생략할 수 없음
+SELECT ename, dname, d.deptno FROM emp e JOIN dept d ON e.deptno=d.deptno;
+
+ON절은 JOIN 조건을 명시하고 WHERE에 부가 조건을 명시
+SELECT e.ename, d.dname FROM emp e JOIN dept d ON e.deptno=d.deptno
+WHERE e.ename = 'ALLEN';
+
+만약 JOIN 조건에 사용된 컬럼의 이름이 같다면 USING절을 사용하여 조인 조건을 정의할 수 있음
+(주의)USING(컬럼명) 절에 명시한 컬럼명을 호출할 때는 테이블명 또는 알리아스를 명시해서 호출 불가
+
+SELECT e.ename, d.deptno FROM emp e JOIN dept d USING(deptno);
+SELECT e.ename, deptno, d.dname FROM emp e JOIN dept d USING(deptno);
+
+SELECT ename, deptno, dname FROM emp JOIN dept USING(deptno);
+
+SELECT e.ename, deptno FROM emp e JOIN dept d USING(deptno) WHERE e.ename='ALLEN';
+
+SELF JOIN
+사원 이름과 해당 사원의 관리자 이름 구하기(관리자가 없는 사원은 제외)
+SELECT e.ename name, m.ename manager_name FROM emp e JOIN emp m ON e.mgr=m.empno;
+
+외부 조인(OUTER JOIN)
+누락된 행의 방향 표시
+SELECT DISTINCT(e.deptno), d.deptno FROM emp e RIGHT OUTER JOIN dept d ON e.deptno=d.deptno;
+
+사원이름과 해당 사원의 관리자 이름 구하기(관리자 없는 사원도 표시)
+SELECT e.ename name, m.ename manager_name FROM emp e LEFT OUTER JOIN emp m ON e.mgr=m.empno;
+
+[실습문제]
+1.모든 사원의 이름, 부서번호, 부서이름, 근무지를 표시하시오. (emp, dept)
+2.업무가 SALESMAN인 사원의 정보를 이름, 업무, 부서명, 근무지 순으로 출력하시오. (emp, dept)
+3.커미션이 책정된 사원들의 사원번호, 이름, 연봉, 급여+커미션, 급여등급을 출력하는데
+  각각의 컬럼명을 "사원번호", "이름", "연봉", "실급여", "급여등급"으로 출력하시오.
+  단, 커미션이 null인 것은 제외하고 출력(emp, salgrade, 실급여로 급여등급 구하기)
+
+SELECT e.ename, d.deptno, d.dname, d.loc FROM emp e JOIN dept d ON e.deptno=d.deptno;
+SELECT e.ename, e.job, d.dname, d.loc FROM emp e JOIN dept d USING(deptno) WHERE e.job='SALESMAN';
+
+SELECT e.empno 사원번호, e.ename 이름, e.sal*12 연봉, e.sal+e.comm 실급여, s.grade 급여등급
+FROM emp e JOIN salgrade s ON e.sal+e.comm BETWEEN s.losal AND s.hisal;
+
+4.10번 부서에서 근무하는 사원들의 부서번호, 부서이름, 사원이름, 월급, 급여등급을 출력하시오. (emp, dept, salgrade)
+
+[오라클 전용]
+SELECT e.ename, d.deptno, d.dname, e.sal, s.grade
+FROM dept d, emp e, salgrade s WHERE d.deptno=e.deptno AND e.sal BETWEEN s.losal AND s.hisal AND e.deptno=10;
+
+[표준 SQL]
+SELECT e.ename, d.deptno, d.dname, e.sal, s.grade 
+FROM emp e JOIN dept d ON e.deptno=d.deptno JOIN salgrade s ON e.sal BETWEEN s.losal AND s.hisal WHERE e.deptno=10;
+
+
+집합연산자
+
+UNION: 합집합 중복값 제거
+       UNION은 두 테이블의 결합을 나타내며 결합시키는 두 테이블의 중복되지 않은 값들을 반환
+SELECT deptno FROM emp
+UNION
+SELECT deptno FROM dept;
+
+UNION ALL: UNION과 같으나 두 테이블의 중복되는 값까지 반환
+SELECT deptno FROM emp
+UNION ALL
+SELECT deptno FROM dept;
+
+INTERSECT: 두 행의 집합 중 공통된 행을 반환
+SELECT deptno FROM emp
+INTERSECT
+SELECT deptno FROM dept;
+
+MINUS: 첫번째 SELECT문에 의해 반환되는 행 중에서
+       두번째 SELECT문에 의해 반환되는 행의 존재하지 않는 행들을 보여줌
+SELECT deptno FROM dept
+MINUS
+SELECT deptno FROM emp;
+
+SUBQUERY: 다른 하나의 SQL문장의 절에 NESTED된 SELECT문장
+SELECT job FROM emp WHERE empno=7369;
+SELECT empno, ename, job FROM emp WHERE job='CLERK'
+-> 위의 두개의 문장을 서브쿼리를 사용해서 작성
+SELECT empno, ename, job FROM emp WHERE job = (SELECT job FROM emp WHERE empno=7369);
+
+7698의 급여보다 많은 급여를 받는 사원들의 사원번호, 사원이름, 급여를 출력하시오.
+SELECT empno, ename, sal FROM emp WHERE sal > (SELECT sal FROM emp WHERE empno=7698); 
+
+다중행 서브쿼리: 하나 이상의 행을 반환하는 서브쿼리
+
+IN 연산자의 사용
+부서별로 가장 급여를 적게 받는 사원과 동일한 급여를 받는 사원의 정보를 출력하시오
+SELECT MIN(sal) FROM emp GROUP BY deptno;
+SELECT * FROM emp WHERE sal IN (SELECT MIN(sal) FROM emp GROUP BY deptno);
+
+ANY 연산자의 사용
+ANY 연산자는 서브쿼리의 결과값 중 어느 하나의 값이라도 만족이 되면 결과값을 반환
+
+SELECT sal FROM emp WHERE job = 'SALESMAN';
+SELECT ename, sal FROM emp WHERE sal>1250 OR sal>1500 OR sal>1600;
+->위 문장을 서브쿼리로 작성
+SELECT ename, sal FROM emp WHERE sal > ANY(SELECT sal FROM emp WHERE job = 'SALESMAN');
+
+ALL 연산자의 사용
+서브쿼리의 결과와 모든 값이 일치
+SELECT sal FROM emp WHERE deptno=20;
+SELECT empno, ename, sal, deptno FROM emp WHERE sal>800 AND sal>2975 AND sal>3000;
+->위 문장을 서브쿼리로 작성
+SELECT empno, ename, sal, deptno FROM emp WHERE sal > ALL(SELECT sal FROM emp WHERE deptno=20);
+
+다중열 서브쿼리
+서브 쿼리의 결과가 두 개 이상의 컬럼으로 반환되어 메인 쿼리에 전달하는 쿼리
+
+SELECT empno, ename, sal, deptno FROM emp
+WHERE (deptno, sal) IN (SELECT deptno, sal FROM emp WHERE deptno=30);
+
+--이렇게 하면 안될까?
+SELECT empno, ename, sal, deptno FROM emp WHERE sal IN (SELECT sal FROM emp WHERE deptno=30);
+
+부서별로 가장 급여를 적게 받는 사원의 정보를 출력
+부서별로 가장 급여를 적게 받는 사원과 동일한 급여를 받는 사원 정보를 출력
+
+SELECT empno, ename, sal, deptno FROM emp WHERE (deptno, sal) IN (SELECT deptno, MIN(sal) FROM emp GROUP BY deptno);
+SELECT empno, ename, sal, deptno FROM emp WHERE sal IN (SELECT MIN(sal) FROM emp GROUP BY deptno);
+
+--이렇게 하면 안될까?
+SELECT empno, ename, sal, deptno FROM emp WHERE sal IN (SELECT MIN(sal) FROM emp GROUP BY deptno);
+
+인라인뷰: 메인 쿼리의 FROM절을 서브 쿼리로 이용하는 방법
+
+급여가 20번 부서의 평균 급여보다 많은 급여를 받는 사원의 사원번호, 이름, 부서명 출력
+
+SELECT empno, ename, deptno FROM emp WHERE sal > (SELECT AVG(sal) FROM emp WHERE deptno=20);
+
+SELECT e.empno, e.ename, d.dname FROM (
+        SELECT empno, ename, deptno FROM emp 
+        WHERE sal > (SELECT AVG(sal) FROM emp WHERE deptno=20)) e JOIN dept d ON e.deptno=d.deptno;
+
+SELECT e.empno, e.ename, d.dname FROM emp e JOIN dept d ON e.deptno=d.deptno
+WHERE sal > (SELECT AVG(sal) FROM emp WHERE deptno=20);
+
+부서별로 총급여를 출력하는데 부서번호, 부서명, 총급여를 출력하시오.
+SELECT deptno, dname, total 
+FROM dept JOIN (SELECT deptno, SUM(sal) total FROM emp GROUP BY deptno) USING(deptno);
+
+스칼라 서브쿼리
+스칼라값은 단일 값을 의미함
+결과값이 단일 행, 단일 열의 스칼라값으로 반환됨
+만약 결과값이 다중행이거나 다중열이라면 DBMS는 그 중 어떠한 행, 어떠한 열을 출력해야 하는지 알 수 없어 에러를 출력
+SELECT deptno, (SELECT dname FROM dept WHERE deptno=e.deptno), SUM(sal) FROM emp e GROUP BY deptno;
+
+[실습문제]
+1."BLAKE"와 같은 부서에 있는 사원들의 이름과 입사일을 구하는데 "BLAKE"는 제외하고 출력하시오.
+SELECT ename, hiredate, deptno FROM emp  WHERE deptno IN(SELECT deptno FROM emp WHERE ename = 'BLAKE') AND ename != 'BLAKE';
+
+2.평균급여보다 많은 급여를 받은 사원들의 사원번호, 이름, 월급을 출력하는데 월급이 높은 사람 순으로 출력하시오.
+SELECT empno, ename, sal FROM emp WHERE sal > (SELECT AVG(sal) FROM emp) ORDER BY sal DESC;
+
+3.10번 부서에서 급여를 가장 적게 받는 사원과 동일한 급여를 받는 사원의 이름과 월급을 출력하시오.
+SELECT ename, sal, deptno FROM emp WHERE sal = (SELECT MIN(sal) FROM emp WHERE deptno=10);
+
+
+4.(부서별 사원수를 구하고) 사원수가 3명 이하의 부서의 부서명과 사원수를 출력하시오.
+[MY ANSWER]
+SELECT d.dname, COUNT(e.empno) members 
+FROM dept d LEFT OUTER JOIN emp e ON d.deptno=e.deptno 
+GROUP BY d.dname 
+HAVING COUNT(e.empno) <= 3;
+[인라인뷰]
+SELECT a.dname, b.cnt 
+    FROM dept a, (SELECT deptno, COUNT(empno) cnt FROM emp GROUP BY deptno) b 
+    WHERE a.deptno=b.deptno AND b.cnt <= 3;
+[조인]
+SELECT d.dname, COUNT(e.empno) cnt 
+FROM emp e, dept d WHERE e.deptno=d.deptno 
+GROUP BY d.dname 
+HAVING COUNT(e.empno) <= 3;
+
+5.사원번호가 7844인 사원보다 빨리 입사한 사원의 이름과 입사일을 출력하시오.
+[MY ANSWER]
+SELECT ename, hiredate FROM emp WHERE hiredate < (SELECT hiredate FROM emp WHERE empno=7844);
+
+6.직속상사(mgr)가 KING인 모든 사원의 이름과 급여를 출력하시오.
+[MY ANSWER]
+SELECT e.ename, e.sal FROM emp e, emp m WHERE e.mgr=m.empno AND m.ename='KING';
+[IN CLASS]
+SELECT ename, sal FROM emp WHERE mgr IN(SELECT empno FROM emp WHERE ename='KING');
+
+7.20번 부서에서 가장 급여를 많이 받는 사원과 동일한 급여를 받는 사원의 이름과 부서명, 급여, 급여등급을 출력하시오.
+[MY ANSWER]--오라클 전용
+SELECT e.ename, d.dname, e.sal, s.grade 
+FROM emp e, dept d, salgrade s 
+WHERE e.sal BETWEEN s.losal AND s.hisal AND e.deptno=d.deptno
+AND e.sal = (SELECT MAX(sal) FROM emp GROUP BY deptno WHERE deptno=20);
+[표준SQL]
+SELECT e.ename, d.dname, e.sal, s.grade
+FROM emp e JOIN dept d
+ON e.deptno=d.deptno
+JOIN salgrade s
+ON e.sal BETWEEN s.losal AND s.hisal
+WHERE e.sal = (SELECT MAX(sal) FROM emp GROUP BY deptno WHERE deptno=20);
