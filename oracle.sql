@@ -721,6 +721,7 @@ SELECT deptno FROM dept
 MINUS
 SELECT deptno FROM emp;
 
+
 SUBQUERY: 다른 하나의 SQL문장의 절에 NESTED된 SELECT문장
 SELECT job FROM emp WHERE empno=7369;
 SELECT empno, ename, job FROM emp WHERE job='CLERK'
@@ -842,4 +843,366 @@ FROM emp e JOIN dept d
 ON e.deptno=d.deptno
 JOIN salgrade s
 ON e.sal BETWEEN s.losal AND s.hisal
-WHERE e.sal = (SELECT MAX(sal) FROM emp GROUP BY deptno WHERE deptno=20);
+WHERE e.sal=(SELECT MAX(sal) FROM emp WHERE deptno=20);
+
+
+8.총급여(sal+comm)가 평균 급여보다 많은 급여를 받는 사람의 부서번호, 이름, 총급여, 커미션을 출력하시오.
+  (커미션은 유(O), 무(X)로 표시하고 컬럼명은 "comm유무"로 출력)
+[MY ANSWER] --정답
+SELECT deptno, ename, sal, sal+NVL(comm,0) 총급여, NVL2(comm, 'X', 'O') comm유무 
+FROM emp 
+WHERE sal+NVL(comm,0) > (SELECT AVG(sal+NVL(comm,0)) FROM emp);
+[IN CLASS1]
+SELECT deptno, ename, sal, sal+NVL(comm,0) 총급여,
+       CASE WHEN comm IS NOT NULL THEN 'O'
+       ELSE 'X'
+       END comm유무
+FROM emp
+WHERE sal+NVL(comm, 0) > (SELECT AVG(sal) FROM emp); --급여에서 평균을 구하는 것, 총급여에서 평균을 구하는 것 둘다 가능
+[IN CLASS2]
+SELECT deptno, ename, sal, sal+NVL(comm,0) 총급여,
+       NVL2(comm, 'O', 'X') comm유무
+FROM emp
+WHERE sal+NVL(comm, 0) > (SELECT AVG(sal) FROM emp);
+  
+9.CHICAGO 지역에서 근무하는 사원의 평균 급여보다 높은 급여를 받는 사원의 이름과 급여, 지역명을 출력하시오.
+[MY ANSWER] --오답
+SELECT e.ename, e.sal, d.loc 
+FROM emp e, dept d WHERE e.deptno=d.deptno 
+AND e.sal > (SELECT AVG(sal) 
+             FROM emp 
+             WHERE d.loc='CHICAGO');
+[IN CLASS1] --조인 방식
+SELECT e.ename, e.sal, d.loc 
+FROM emp e, dept d WHERE e.deptno=d.deptno
+AND e.sal > (SELECT AVG(e.sal) 
+             FROM emp e, dept d 
+             WHERE e.deptno=d.deptno AND d.loc='CHICAGO');
+[IN CLASS2] --서브쿼리 방식
+SELECT e.ename, e.sal, d.loc FROM emp e, dept d WHERE e.deptno=d.deptno
+AND e.sal > (SELECT AVG(sal) 
+             FROM emp 
+             WHERE deptno IN(SELECT deptno 
+                             FROM dept 
+                             WHERE loc='CHICAGO'));
+--CHICAGO는 유니크한 값이 아니기 때문에 IN 연산자 사용
+
+10.커미션이 없는 사원들 중 월급이 가장 높은 사원의 이름과 급여등급을 출력하시오.
+[MY ANSWER] --쓸데없이 돌아감
+SELECT e.ename, s.grade FROM emp e, salgrade s WHERE e.sal BETWEEN s.losal AND s.hisal
+AND e.empno = (SELECT empno FROM emp WHERE sal = (SELECT MAX(sal) FROM emp WHERE comm IS NULL));
+[IN CLASS]
+SELECT e.ename, s.grade 
+FROM emp e, salgrade s WHERE e.sal BETWEEN s.losal AND s.hisal
+AND e.sal = (SELECT MAX(sal) 
+             FROM emp 
+             WHERE comm IS NULL);
+--근데 여기서 만약 커미션이 있는 사원중 월급이 5000인 사람이 있었다면 잘못 되는거 아닌가?
+
+11.SMITH의 직속상사(mgr)의 이름과 부서명, 근무지역을 출력하시오.
+[MY ANSWER] --오답
+SELECT e.ename, d.dname, d.loc FROM emp e, dept d, emp m 
+WHERE e.deptno=d.deptno 
+AND e.mgr = m.empno
+AND e.empno = (SELECT mgr FROM emp WHERE ename='SMITH');
+[IN CLASS]
+SELECT e.ename, d.dname, d.loc
+FROM emp e JOIN dept d
+USING(deptno)
+WHERE e.empno IN(SELECT mgr FROM emp WHERE ename='SMITH'); --SMITH는 프라이머리키가 아니기 때문에 IN 연산자 사용
+
+12.ALLEN보다 급여를 많이 받는 사람 중에서 입사일이 가장 빠른 사원과 동일한 날짜에 입사한 사원의 이름과 입사일, 급여를 출력하시오.
+[MY ANSWER] --쓸데없이 돌아감
+SELECT ename, hiredate, sal FROM emp
+WHERE hiredate = (SELECT MIN(hiredate) 
+                  FROM (SELECT ename, hiredate, sal 
+                        FROM emp 
+                        WHERE sal > (SELECT sal 
+                                     FROM emp 
+                                     WHERE ename='ALLEN')));
+[IN CLASS]
+SELECT ename, hiredate, sal 
+FROM emp WHERE hiredate = (SELECT MIN(hiredate) 
+                           FROM emp 
+                           WHERE sal > ALL(SELECT sal 
+                                           FROM emp 
+                                           WHERE ename='ALLEN'));
+--ALLEN은 프라이머리키가 아니기 때문에 다중행을 사용해야함
+--모든 ALLEN의 급여보다 높아야하기 때문에 ALL 연산자 사용
+
+
+
+
+INSERT문: 테이블에 행을 삽입
+
+전체 데이터 삽입(전체 컬럼 명시시)
+INSERT INTO emp (empno, ename, job, mgr, hiredate, sal, comm, deptno)
+VALUES (8000, 'DENNIS', 'SALESMAN', 7698, '99/01/22',1700, 200, 30);
+
+전체 데이터 삽입할 때는 컬럼명 생략 가능
+INSERT INTO emp 
+VALUES (8001, 'SUNNY', 'SALESMAN', 7698, '99/03/01', 1000, 300, 30);
+
+NULL 삽입 방법
+값이 입력되지 않는 컬럼은 제외
+INSERT INTO emp (empno, ename, job, mgr, hiredate, sal, deptno)
+VALUES (8003, 'PETER', 'CLERK', 7698, '22/11/06', 1700, 20);
+
+값이 입력되지 않는 컬럼을 제외하지 않았을 경우
+INSERT INTO emp (empno, ename, job, mgr, hiredate, sal, comm, deptno)
+VALUES (8004, 'ANNIE', 'CLERK', 7698, '22/11/06', 1800, NULL, 30);
+
+날짜의 삽입
+INSERT INTO emp (empno, ename, job, mgr, hiredate, sal, comm, deptno)
+VALUES (8005, 'MICHAEL', 'CLERK', 7698, TO_date('22/11/06', 'YY/MM/DD'), 1800, NULL, 30
+
+
+UPDATE문: 행 단위로 데이터 갱신
+UPDATE emp SET mgr=7900 WHERE empno=8000;
+UPDATE emp SET ename='MARIA', sal=2500, comm=500 WHERE empno=8000;
+
+WHERE절을 명시하지 않으면 전체 행의 데이터를 수정
+UPDATE emp SET ename='KINGKONG';);
+
+ROLLBACK;
+
+DELETE문: 행을 삭제
+DELETE FROM emp WHERE empno=7369;
+
+WHERE절을 명시하지 않으면 모든 행이 삭제
+DELETE FROM emp;
+
+ROLLBACK;
+
+데이터베이스 트랜잭션
+트랜잭션은 데이터 처리의 한 단위
+오라클 서버에서 발생하는 SQL문들은 하나의 논리적인 작업 단위이며, 
+성공하거나 실패하는 일련의 SQL문을 트랜잭션이라고 할 수 있음
+트랜잭션은 데이터를 일관되게 변경하는 DML 문장으로 구성됨
+
+데이터베이스 객체
+
+테이블: 기본 저장 단위로 행과 열로 구성
+테이블은 기본적인 데이터 저장 단위
+레코드와 컬럼으로 구성
+레코드(record/row): 테이블의 데이터는 행에 저장
+컬럼(column): 테이블의 각 컬럼은 데이터를 구별할 수 있는 속성을 표현
+ 
+이름 지정 규칙
+-문자로 시작해야 함
+-1~30자까지 가능
+-A~Z,a~z,0~9,_,$,#만 포함해야 함
+-동일한 사용자(계정)가 소유한 다른 객체의 이름과 중복되지 않아야 함
+-오라클 서버의 예약어가 아니어야 함
+
+사용자가 소유한 테이블의 이름
+SELECT table_name FROM user_tables;
+
+사용자가 소유한 개별 객체 유형
+SELECT DISTINCT(object_type) FROM user_objects;
+
+사용자가 소유한 테이블, 뷰, 동의어 및 시퀀스
+SELECT * FROM user_catalog;
+
+테이블의 생성
+CREATE TABLE employee(
+    empno NUMBER(6),
+    name VARCHAR2(30) NOT NULL, --30바이트(글자수 아님) 
+                                --오라클xe에서는 한글을 3바이트로 처리해서 한글 10자 저장 가능
+    salary NUMBER(8,2),
+    hire_date DATE DEFAULT SYSDATE,
+    CONSTRAINT employee_pk PRIMARY KEY(empno) --employee_pk: 오라클에서 사용하는 식별자
+);
+
+INSERT INTO employee (empno,name,salary)
+VALUES (100, '홍길동', 1000.23);
+COMMIT;
+
+SELECT * FROM employee;
+
+테이블 생성시 PRIMARY KEY 및 FOREIGN KEY 제약 조건 추가하기
+CREATE TABLE suser (
+    id VARCHAR2(20),
+    name VARCHAR2(30),
+    CONSTRAINT suser_pk PRIMARY KEY (id)
+);
+
+CREATE TABLE sboard(
+    num NUMBER, --길이를 주지 않으면 최대치로 설정됨
+    id VARCHAR2(20) NOT NULL,
+    content VARCHAR2(4000) NOT NULL,
+    CONSTRAINT sboard_pk PRIMARY KEY (num),
+    CONSTRAINT sboard_fk FOREIGN KEY (id) REFERENCES suser (id) --부모테이블(suser)로부터 id 참조
+);
+
+INSERT INTO suser(id,name) VALUES ('dragon', '홍길동');
+INSERT INTO suser(id,name) VALUES ('sky', '박문수');
+
+INSERT INTO sboard(num, id, content) VALUES (1, 'sky', '오늘은 금요일');
+INSERT INTO sboard(num, id, content) VALUES (2, 'dragon', '내일은 토요일');
+
+두 개의 테이블 조인
+SELECT * FROM suser JOIN sboard USING(id);
+
+COMMIT;
+
+테이블의 관리(DDL문)
+ADD 연산자: 테이블에 새로운 컬럼을 추가
+ALTER TABLE employee ADD (addr VARCHAR(2));
+
+제약조건 추가
+ALTER TABLE employee ADD CONSTRAINT employee_pk PRIMARY KEY (empno);
+
+MODIFY 연산자: 테이블의 컬럼을 수정하거나 NOT NULL 컬럼으로 변경할 수 있음
+ALTER TABLE employee MODIFY salary NUMBER(10, 2) NOT NULL;
+
+컬럼명 변경
+ALTER TABLE employee RENAME COLUMN salary TO sal;
+
+테이블명 변경
+RENAME employee TO employee2;
+
+테이블의 삭제
+DROP TABLE employee2;
+
+ON DELETE CASCADE
+부모 테이블의 컬럼을 삭제하면 자식 테이블의 자식 데이터를 모두 삭제
+
+CREATE TABLE s_member(
+    id VARCHAR2(20) PRIMARY KEY,
+    name VARCHAR2(30)
+);
+
+CREATE TABLE s_member_detail(
+    num NUMBER PRIMARY KEY,
+    content VARCHAR2(4000) NOT NULL,
+    id VARCHAR2(20) NOT NULL REFERENCES s_member (id) ON DELETE CASCADE
+);
+
+INSERT INTO s_member (id, name) VALUES ('dragon', '홍길동');
+INSERT INTO s_member (id, name) VALUES ('sky', '박문수');
+
+INSERT INTO s_member_detail (num, content, id) VALUES (1, '오늘은 금요일', 'sky');
+INSERT INTO s_member_detail (num, content, id) VALUES (2, '내일은 토요일', 'sky');
+INSERT INTO s_member_detail (num, content, id) VALUES (3, '모레는 일요일', 'sky');
+
+
+DELETE FROM s_member WHERE id='sky';
+
+COMMIT;
+
+[실습문제]
+1.student라는 이름으로 테이블 생성
+컬럼명         id           name          age         score
+데이터타입 VARCHAR2(10)  VARCHAR2(30)   NUMBER(3)    NUMBER(3)
+제약 조건 PRIMARY KEY     NOT NULL      NOT NULL     NOT NULL
+
+2. 데이터를 아래와 같이 입력하시오.
+id          name       age      score
+dragon     홍길동       21        100
+sky        장영실       22        99
+blue       박문수       34        88
+
+3. 데이터 읽기
+student 테이블에서 성적 합계를 구하시오.
+
+1.
+CREATE TABLE student(
+    id VARCHAR2(10) PRIMARY KEY,
+    name VARCHAR2(30) NOT NULL,
+    age NUMBER(3) NOT NULL,
+    score NUMBER(3) NOT NULL
+);
+
+2.
+INSERT INTO student VALUES ('dragon', '홍길동', 21, 100);
+INSERT INTO student VALUES ('sky', '장영실', 22, 99);
+INSERT INTO student VALUES ('blue', '박문수', 34, 88);
+COMMIT;
+
+3.
+SELECT SUM(score) FROM student;
+
+뷰(VIEW)
+논리적으로 하나 이상의 테이블에 있는 데이터의 부분 집합
+-데이터 엑세스를 제한하기 위해
+-복잡한 질의를 쉽게 작성하기 위해
+-데이터 독립성을 제공하기 위해
+-동일한 데이터로부터 다양한 결과를 얻기 위해
+*뷰는 가상으로 만들어진 컬럼(Virtual Column)을 제외하면 수정이 가능하고 삭제도 가능하다.
+수정, 삭제하면 원래 테이블에 반영
+삽입은 여러 제약 조건과 virtual column 사용으로 제약이 많음
+
+VIEW 생성
+
+CREATE OR REPLACE VIEW emp10_view
+AS SELECT empno id_number, ename name, sal*12 ann_salary 
+   FROM emp WHERE deptno=10;
+   
+SELECT * FROM emp10_view;
+
+CREATE OR REPLACE VIEW emp_info_view
+AS SELECT e.empno, e.ename, e.deptno, d.loc, d.dname 
+   FROM emp e, dept d WHERE e.deptno=d.deptno;
+
+SELECT * FROM emp_info_view;
+
+view를 통한 데이터 변경하기
+일반적으로 view는 조회용으로 많이 사용되지만 아래와 같이 데이터를 변경할 수 있음
+
+UPDATE emp10_view SET name='SCOTT' WHERE id_number=7839;
+
+가상 열 때문에 등록 제한, 가상 열을 제외하면 삽입 가능
+INSERT INTO emp10_view(id_number, name, ann_salary) VALUES(8000, 'JOHN', 19000);
+
+SELECT * FROM emp10_view;
+
+WITH READ ONLY: 읽기 전용 뷰를 생성하는 옵션
+
+CREATE OR REPLACE VIEW emp20_view
+AS SELECT empno id_number, ename name, sal*12 ann_salary
+   FROM emp WHERE deptno=20
+WITH READ ONLY;
+
+SELECT * FROM emp20_view;
+UPDATE emp20_view SET name='SCOTT' WHERE id_number=7839;
+
+VIEW의 수정
+CREATE OR REPLACE VIEW emp10_view (id_number, name, sal, department_id)
+AS SELECT empno, ename, sal, deptno
+   FROM emp
+   WHERE deptno=10;
+   
+SELECT * FROM emp10_view;
+
+VIEW의 삭제
+DROP VIEW emp10_view;
+
+시퀀스 생성
+CREATE SEQUENCE test_seq
+START WITH 1
+INCREMENT BY 1
+MAXVALUE 100000;
+시작 값이 1이고 1씩 증가하고 최대값이 100000이 되는 시퀀스 생성
+
+CURRVAL: 현재 값을 반환
+NEXTVAL: 현재 시퀀스 값의 다음 값 반환
+
+SELECT test_seq.CURRVAL FROM dual;
+SELECT test_seq.NEXTVAL FROM dual;
+
+sboard 테이블에 데이터를 삽입할 때 시퀀스 활용
+INSERT INTO sboard(num, id, content) VALUES (test_seq.NEXTVAL, 'sky', '여기서는 강남');
+
+SELECT * FROM sboard;
+
+시퀀스 수정
+START WITH는 수정할 수 없음
+
+ALTER SEQUENCE test_seq 
+INCREMENT BY 5;
+INSERT INTO sboard(num, id, content) VALUES (test_seq.NEXTVAL, 'sky', '여기서는 강남');
+SELECT * FROM sboard;
+
+시퀀스 삭제
+DROP SEQUENCE test_seq;
