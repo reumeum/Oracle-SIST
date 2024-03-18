@@ -723,6 +723,9 @@ SELECT deptno FROM emp;
 
 
 SUBQUERY: 다른 하나의 SQL문장의 절에 NESTED된 SELECT문장
+
+단일행 서브쿼리: 오직 한 개의 행(값)을 반환
+
 SELECT job FROM emp WHERE empno=7369;
 SELECT empno, ename, job FROM emp WHERE job='CLERK'
 -> 위의 두개의 문장을 서브쿼리를 사용해서 작성
@@ -1206,3 +1209,30 @@ SELECT * FROM sboard;
 
 시퀀스 삭제
 DROP SEQUENCE test_seq;
+
+
+인덱스(INDEX)
+인덱스는 데이터 검색을 빨리 하기 위해 사용한다.
+테이블의 컬럼에 대한 제약 조건을 설정할 때 PRIMARY KEY나 UNIQUE로 설정하면
+오라클은 자동으로 이 컬럼에 대해 UNIQUE INDEX를 설정한다.
+
+-유일한 값을 가지는 컬럼에 인덱스 설정: UNIQUE INDEX
+CREATE UNIQUE INDEX dname_idx ON dept(dname);
+
+-유일한 값을 가지지 않는 컬럼에 인덱스 설정: NON UNIQUE INDEX
+CREATE INDEX emp_ename_idx ON emp(ename);
+
+동의어 생성
+-동의어(객체의 다른 이름)를 생성하여 객체 액세스를 단순화
+CREATE SYNONYM emp20 FOR emp20_view;
+
+
+
+
+
+
+
+
+
+
+
