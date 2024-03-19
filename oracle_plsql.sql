@@ -75,8 +75,8 @@ grade CHAR(2);
 emp_num2 INTETER := 1;
 
 상수
-nYear = CONSTATNT INTEGER:=30; --(O)
-nYEAR = CONSTATNT INTEGER; --(X)
+nYear CONSTANT INTEGER:=30; --(O)
+nYear CONSTANT INTEGER; --(X)
 
 %TYPE : 참조할 테이블에 있는 컬럼의 데이터 타입을 자동으로 가져옴
 nSal emp.sal%TYPE;
@@ -393,6 +393,449 @@ SELECT ADD_NUM(10,17) FROM dual;
 SELECT ADD_NUM(10.9, 2.1) FROM dual;
 
 SELECT GET_EMP_COUNT(10) FROM dual;
-SELECT deptno, dname, GET_EMP_COUNT(deptno) FROM dept;
+SELECT deptno, dname, GET_EMP_COUNT(deptno) 사원수 FROM dept;
+
+3.emp테이블의 입사일을 입력하면 근무연차를 구하는 함수를 정의하시오. (소수점 절삭, get_info_hiredate)
+
+[MY ANSWER] --왜 커서를 썼고, 왜 안 써도 되지?
+CREATE OR REPLACE FUNCTION get_info_hiredate(p_hiredate emp.hiredate%TYPE)
+    RETURN NUMBER IS
+    CURSOR years_crs IS
+    SELECT TRUNC(MONTHS_BETWEEN(SYSDATE, p_hiredate)/12)
+    FROM emp
+    WHERE hiredate = p_hiredate;
+    
+    years NUMBER(3);
+BEGIN
+    OPEN years_crs;
+    LOOP
+        FETCH years_crs INTO years;
+        EXIT WHEN years_crs%NOTFOUND;
+    END LOOP;
+    RETURN years;
+END;
+--값을 불러올 커서를 만들고, 커서를 담을 변수를 만들고, 커서에서 변수에 값을 fetch하고, 변수를 반환하기.
+
+[IN CLASS]
+CREATE OR REPLACE FUNCTION get_info_hiredate(p_hiredate emp.hiredate%TYPE)
+    RETURN NUMBER IS
+BEGIN
+    RETURN TRUNC(MONTHS_BETWEEN(SYSDATE, p_hiredate)/12);
+END;
+
+SELECT MONTHS_BETWEEN(SYSDATE, hiredate) FROM emp;
+SELECT ename, hiredate, GET_INFO_HIREDATE(hiredate) 근무연차 FROM emp;
 
 
+4.emp테이블을 이용해서 사원번호를 입력하면 해당 사원의 관리자 이름을 구하는 함수를 정의하시오. (get_mgr_name)
+CREATE OR REPLACE FUNCTION get_mgr_name(p_empno emp.empno%TYPE)
+    RETURN VARCHAR2 IS
+    mgr_name VARCHAR2(10);
+BEGIN
+    SELECT m.ename 
+    INTO mgr_name
+    FROM emp e, emp m 
+    WHERE e.mgr=m.empno
+    AND e.empno=p_empno;
+    RETURN mgr_name;
+END;
+
+[IN-CLASS] --서브쿼리
+CREATE OR REPLACE FUNCTION get_mgr_name(emp_no emp.empno%TYPE)
+    RETURN VARCHAR2 IS
+    m_name VARCHAR2(10);
+BEGIN
+    SELECT ename
+    INTO m_name
+    FROM emp
+    WHERE empno = (SELECT mgr FROM emp 
+                   WHERE empno=emp_no);
+    RETURN m_name;
+END;
+
+[IN-CLASS] --조인 (내 답변과 동일)
+CREATE OR REPLACE FUNCTION get_mgr_name(emp_no emp.empno%TYPE)
+    RETURN VARCHAR2 IS
+    m_name VARCHAR2(10);
+BEGIN
+    SELECT m.ename
+    INTO m_name
+    FROM emp e, emp m
+    WHERE e.mgr=m.empno
+    AND e.empno=emp_no;
+    RETURN m_name;
+END;
+
+SELECT ename, GET_MGR_NAME(empno) manager FROM emp;
+
+5.emp테이블을 이용해서 사원번호를 입력하면 급여 등급을 구하는 함수를 정의하시오. (get_sal_grade)
+CREATE OR REPLACE FUNCTION get_sal_grade(p_empno emp.empno%TYPE)
+    RETURN NUMBER IS
+    sal_grade NUMBER(2);
+BEGIN
+    SELECT s.grade 
+    INTO sal_grade
+    FROM salgrade s, emp e 
+    WHERE e.sal BETWEEN s.losal AND s.hisal
+    AND empno = p_empno;
+    RETURN sal_grade;
+END;
+
+[IN-CLASS] --CASE문 (직접 급여등급 만들기)
+CREATE OR REPLACE FUNCTION get_sal_grade(emp_no emp.empno%TYPE)
+    RETURN CHAR IS
+    sgrade CHAR(1);
+BEGIN
+    SELECT CASE WHEN sal >= 4000 THEN 'A'
+                WHEN sal >= 3000 AND sal < 4000 THEN 'B'
+                WHEN sal >= 2000 AND sal < 3000 THEN 'C'
+                WHEN sal >= 1000 AND sal < 2000 THEN 'D'
+                ELSE 'F'
+           END grade
+    INTO sgrade 
+    FROM emp
+    WHERE empno=emp_no;
+    
+    RETURN sgrade;
+END;
+
+[IN-CLASS] --조인 (내 답변과 동일)
+CREATE OR REPLACE FUNCTION get_sal_grade(emp_no emp.empno%TYPE)
+    RETURN NUMBER IS
+    sgrade NUMBER;
+BEGIN
+    SELECT s.grade
+    INTO sgrade
+    FROM emp e, salgrade s
+    WHERE e.sal BETWEEN s.losal AND s.hisal
+    AND e.empno=emp_no;
+    
+    RETURN sgrade;
+END;
+
+SELECT ename, sal, GET_SAL_GRADE(empno) salgrade FROM emp ORDER BY sal DESC;
+
+6.사원번호를 입력하면 근무지를 구하는 함수(find_loc)
+[MY ANSWER] --조인
+CREATE OR REPLACE FUNCTION find_loc(emp_no emp.empno%TYPE)
+    RETURN VARCHAR2 IS
+    location VARCHAR2(14);
+BEGIN
+    SELECT d.loc
+    INTO location
+    FROM dept d JOIN emp e
+    ON d.deptno=e.deptno
+    WHERE e.empno=emp_no;
+    
+    RETURN location;
+END;
+
+[MY ANSWER] --서브쿼리
+CREATE OR REPLACE FUNCTION find_loc(emp_no emp.empno%TYPE)
+    RETURN VARCHAR2 IS
+    location VARCHAR2(14);
+BEGIN
+    SELECT loc
+    INTO location
+    FROM dept
+    WHERE deptno = (SELECT deptno FROM emp
+                    WHERE empno= emp_no);
+    
+    RETURN location;
+END;
+
+SELECT ename, deptno, FIND_LOC(empno) location FROM emp ORDER BY deptno;
+SELECT FIND_LOC(7698) FROM dual;
+
+생성된 함수 확인하기
+데이터 사전(DATA Dictionary)을 통해 검색. 
+데이터 사전에 저장된 모든 값은 대문자로 저장되기 때문에 대문자로 검색.
+
+SELECT object_name, object_type FROM user_objects
+WHERE object_type='FUNCTION' ORDER BY object_name;
+
+작성된 함수의 소스 코드 확인
+SELECT text FROM user_source
+WHERE type='FUNCTION' AND name='TAX';
+
+
+프로시저
+
+CREATE OR REPLACE PROCEDURE hello_world
+IS
+    --변수 선언
+    message VARCHAR2(100);
+BEGIN
+    message := 'Hello World!';
+    DBMS_OUTPUT.PUT_LINE(message);
+END;
+
+프로시저 실행
+EXECUTE HELLO_WORLD;
+EXEC HELLO_WORLD;
+
+CREATE OR REPLACE PROCEDURE hello_oracle(p_message IN VARCHAR2)
+IS
+BEGIN
+    DBMS_OUTPUT.PUT_LINE(p_message);
+END;
+
+EXEC HELLO_ORACLE('Hello Oracle!');
+
+작성된 Stored Procedure 확인
+SELECT object_name, object_type
+FROM user_objects
+WHERE object_type='PROCEDURE';
+
+작성된 Procedure의 소스코드 확인
+SELECT text FROM user_source
+WHERE type='PROCEDURE' AND name='HELLO_WORLD';
+
+부서테이블에 부서정보를 입력하는 프로시저를 생성
+CREATE OR REPLACE PROCEDURE add_department(p_deptno IN dept.deptno%TYPE, 
+                                           p_dname IN dept.dname%TYPE, 
+                                           p_loc IN dept.loc%TYPE)
+IS
+BEGIN
+    --파라미터 변수에 입력 받은 값으로 부서(dept)테이블의 각 컬럼에 데이터를 추가 정상적으로 transaction 종료
+    INSERT INTO dept VALUES(p_deptno, p_dname, p_loc);
+    COMMIT;
+    
+    EXCEPTION WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE(p_dname || ' register is failed');
+        ROLLBACK;
+END;
+
+EXEC ADD_DEPARTMENT(60, 'IT SERVICE', 'LONDON');
+
+사원테이블에 사원 정보를 저장
+CREATE OR REPLACE PROCEDURE register_emp(e_empno emp.empno%TYPE,
+                                         e_ename emp.ename%TYPE,
+                                         e_job emp.job%TYPE,
+                                         e_mgr emp.mgr%TYPE,
+                                         e_sal emp.sal%TYPE,
+                                         e_comm emp.comm%TYPE,
+                                         e_deptno emp.deptno%TYPE
+                                         )
+IS
+BEGIN
+    INSERT INTO emp (empno, ename, job, mgr, hiredate, sal, comm, deptno)
+    VALUES (e_empno, e_ename, e_job, e_mgr, SYSDATE, e_sal, e_comm, e_deptno);
+    COMMIT;
+    
+    EXCEPTION WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE(e_ename || ' register failed');
+        ROLLBACK;
+END;
+
+EXEC REGISTER_EMP(9000, 'JUDE', 'MANAGER', 7902, 6000, 200, 30);
+SELECT * FROM emp;
+
+부서번호를 통해서 부서명과 부서의 위치 구하기
+CREATE OR REPLACE PROCEDURE output_department(p_dept_no dept.deptno%TYPE)
+IS 
+    d_dname dept.dname%TYPE;
+    d_loc dept.loc%TYPE;
+BEGIN
+    --parameter 변수로부터 부서번호를 받아 해당 부서의 정보 질의
+    SELECT dname, loc
+    INTO d_dname, d_loc
+    FROM dept
+    WHERE deptno=p_dept_no;
+    
+    DBMS_OUTPUT.PUT_LINE(d_dname || ', ' || d_loc);
+END;
+
+EXEC OUTPUT_DEPARTMENT(10);
+
+사원의 입사한 연도를 입력해서 사원정보 구하기
+CREATE OR REPLACE PROCEDURE info_hiredate(p_year IN VARCHAR2)
+IS
+    --%ROWTYPE으로 데이터 타입이 지정되어 있는 사원테이블(emp)의 하나의 행이 가지는
+    --모든 컬럼의 데이터 타입을 가져옴
+    e_emp emp%ROWTYPE;
+BEGIN
+    SELECT empno, ename, sal
+    --단일행일 경우에는 INTO를 사용할 수 있지만 다중행일 경우에는 오류 발생
+    --(다중행일 경우 CURSOR 사용해야 함) 
+    INTO e_emp.empno, e_emp.ename, e_emp.sal
+    FROM emp
+    WHERE TO_CHAR(hiredate, 'YYYY')=p_year;
+    
+    DBMS_OUTPUT.PUT_LINE(e_emp.empno || ', ' || e_emp.ename || ', ' || e_emp.sal);
+END;
+
+단일행이 반환되어 정상 동작
+EXEC INFO_HIREDATE('1980');
+여러개의 행이 반환되어 에러 발생
+EXEC INFO_HIREDATE('1981');
+
+커서를 이용하여 질의 수행 결과 반환되는 여러 행을 처리
+CREATE OR REPLACE PROCEDURE info_hiredate(p_year IN VARCHAR2)
+IS
+    e_emp emp%ROWTYPE;
+    --커서 선언
+    CURSOR emp_cur IS
+    SELECT empno, ename, sal
+    FROM emp
+    WHERE TO_CHAR(hiredate, 'YYYY')=p_year;
+BEGIN
+    --커서 열기
+    OPEN emp_cur;
+    
+    --커서로부터 데이터 읽기
+    LOOP
+    FETCH emp_cur INTO e_emp.empno, e_emp.ename, e_emp.sal;
+    EXIT WHEN emp_cur%NOTFOUND;
+    DBMS_OUTPUT.PUT_LINE(e_emp.empno || ', ' || e_emp.ename || ', ' || e_emp.sal);
+    
+    END LOOP;
+    
+    --커서 닫기
+    CLOSE emp_cur;
+END;
+
+EXEC INFO_HIREDATE('1981');
+
+
+SALES 부서에 속한 사원의 정보 보기
+CREATE OR REPLACE PROCEDURE emp_info(p_dept dept.dname%TYPE)
+IS
+    --커서 선언
+    CURSOR emp_cur IS
+    SELECT empno, ename 
+    FROM emp e JOIN dept d
+    ON e.deptno=d.deptno
+    WHERE dname = UPPER(p_dept);
+    
+    --변수 선언
+    e_empno emp.empno%TYPE;
+    e_ename emp.ename%TYPE;
+BEGIN
+    OPEN emp_cur;
+    --커서로부터 데이터 읽기
+    LOOP
+        FETCH emp_cur INTO e_empno, e_ename;
+        EXIT WHEN emp_cur%NOTFOUND;
+        DBMS_OUTPUT.PUT_LINE(e_empno || ', ' || e_ename);
+    END LOOP;
+    
+    CLOSE emp_cur;
+END;
+
+EXEC EMP_INFO('sales');
+
+[실습문제]
+1)업무(job)을 입력하여 해당 업무를 수행하는 사원들의 사원번호, 이름, 급여, 업무를 출력하시오.
+CREATE OR REPLACE PROCEDURE job_info(p_job emp.job%TYPE)
+IS
+    --커서 선언
+    CURSOR emp_cur IS
+    SELECT empno, ename, sal, job
+    FROM emp
+    WHERE job=UPPER(p_job);
+    --변수 선언
+    e_emp emp%ROWTYPE;
+BEGIN
+    OPEN emp_cur;
+    --커서를 이용해서 데이터 읽기
+    LOOP
+        FETCH emp_cur INTO e_emp.empno, e_emp.ename, e_emp.sal, e_emp.job;
+        EXIT WHEN emp_cur%NOTFOUND;
+        DBMS_OUTPUT.PUT_LINE(e_emp.empno || ', ' || e_emp.ename || ', ' 
+                             || e_emp.sal || ', ' || e_emp.job);
+    END LOOP;
+    CLOSE emp_cur;
+END;
+
+EXEC JOB_INFO('manager');
+
+2)사원번호와 새 업무를 입력하면 emp 테이블의 해당 사원의 업무를 갱신할 수 있는 프로시저를 작성하시오.
+CREATE OR REPLACE PROCEDURE update_job(p_empno emp.empno%TYPE, p_job emp.job%TYPE)
+IS
+BEGIN
+    UPDATE emp SET job=UPPER(p_job) WHERE empno=p_empno;
+    COMMIT;
+    
+    EXCEPTION WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE(p_empno || ' update is failed');
+        ROLLBACK;
+END;
+
+EXEC UPDATE_JOB(7369, 'driver');
+SELECT * FROM emp;
+
+
+
+CREATE TABLE book(
+    bookid NUMBER PRIMARY KEY,
+    bookname VARCHAR2(60) NOT NULL,
+    publisher VARCHAR2(60) NOT NULL,
+    price NUMBER NOT NULL
+);
+
+INSERT INTO book VALUES(1, '자바를 찾아서', '서울', 30000);
+INSERT INTO book VALUES(2, '도시', '천국', 10000);
+INSERT INTO book VALUES(3, '하늘', '신라출판사', 50000);
+COMMIT;
+
+SELECT * FROM book;
+
+동일한 도서가 있는지 점검한 후 동일한 도서가 없으면 삽입하고 
+동일한 도서가 있으면 가격을 업데이트
+(book_info)
+[MY ANSWER] --틀림
+CREATE OR REPLACE PROCEDURE book_info(mybookid book.bookid%TYPE,
+                                      mybookname book.bookname%TYPE, 
+                                      mypublisher book.publisher%TYPE,
+                                      myprice book.price%TYPE)
+IS
+    my_book_name book.bookname%TYPE := NULL;
+BEGIN
+    SELECT bookname
+    INTO my_book_name
+    FROM book
+    WHERE bookname = mybookname;
+    
+    IF my_book_name IS NOT NULL THEN
+        UPDATE book SET price=myprice WHERE bookname = mybookname;
+    ELSE
+        INSERT INTO book VALUES(mybookid, mybookname, mypublisher, myprice);
+    END IF;
+    
+    COMMIT;
+    
+    EXCEPTION WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Error has occured');
+        ROLLBACK;
+END;
+
+
+
+[IN-CLASS]
+CREATE OR REPLACE PROCEDURE book_info(mybookid book.bookid%TYPE,
+                                      mybookname book.bookname%TYPE, 
+                                      mypublisher book.publisher%TYPE,
+                                      myprice book.price%TYPE)
+IS
+    mycount NUMBER;
+BEGIN
+    SELECT COUNT(*) INTO mycount FROM book 
+    WHERE bookname = mybookname;
+    
+    IF mycount!=0 THEN
+        --동일한 도서 존재
+        UPDATE book SET price = myprice WHERE bookname = mybookname;
+    ELSE
+        --동일한 도서 미존재
+        INSERT INTO book VALUES(mybookid, mybookname, mypublisher, myprice);
+    END IF;
+    COMMIT;
+    
+    EXCEPTION WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('ERROR!!');
+        ROLLBACK;
+END;
+
+EXEC BOOK_INFO(4, '도시2', '천국', 20000);
+SELECT * FROM book;
