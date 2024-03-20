@@ -931,3 +931,4 @@ END;
 SELECT * FROM book;
 
 INSERT INTO book VALUES (7, '미국 여행', '아메리카 미디어', 10000);
+
