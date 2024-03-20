@@ -839,3 +839,95 @@ END;
 
 EXEC BOOK_INFO(4, '도시2', '천국', 20000);
 SELECT * FROM book;
+
+
+패키지(Package)
+패키지는 업무와 관련된 Stored Procedure 및 Stored Function을 관리하고, 이를 패키지 단위로 배포할 때 유용하게 사용됨
+
+패키지는 선언부와 본문으로 구분
+
+선언부 생성
+
+CREATE OR REPLACE PACKAGE employee_pkg AS
+    PROCEDURE print_ename(p_empno NUMBER);
+    PROCEDURE print_sal(p_empno NUMBER);
+END employee_pkg;
+
+본문생성
+
+CREATE OR REPLACE PACKAGE BODY employee_pkg AS
+    PROCEDURE print_ename(p_empno NUMBER) IS
+        e_name emp.ename%TYPE;
+    BEGIN
+        SELECT ename
+        INTO e_name
+        FROM emp
+        WHERE empno=p_empno;
+        DBMS_OUTPUT.PUT_LINE(e_name);
+        EXCEPTION WHEN NO_DATA_FOUND THEN
+            DBMS_OUTPUT.PUT_LINE('Invalid Employee Number');
+    END print_ename;
+    
+    PROCEDURE print_sal(p_empno NUMBER) IS
+        e_sal emp.sal%TYPE;
+    BEGIN
+        SELECT sal
+        INTO e_sal
+        FROM emp
+        WHERE empno = p_empno;
+        DBMS_OUTPUT.PUT_LINE(e_sal);
+        EXCEPTION WHEN NO_DATA_FOUND THEN
+            DBMS_OUTPUT.PUT_LINE('Invalid Employee Number');
+    END print_sal;
+END employee_pkg;
+
+실행
+EXEC EMPLOYEE_PKG.PRINT_ENAME(7369);
+EXEC EMPLOYEE_PKG.PRINT_SAL(7369);
+없는 사원번호 입력
+EXEC EMPLOYEE_PKG.PRINT_ENAME(8000);
+EXEC EMPLOYEE_PKG.PRINT_SAL(8000);
+
+트리거(Trigger)
+트리거는 데이터의 변경(INSERT,DELETE,UPDATE)문이 실행될 때 자동으로 같이 실행되는 프로시저
+오라클은 기본적으로 실행 전 BEFORE 과 실행 후 AFTER 트리거를 지원
+
+CREATE OR REPLACE TRIGGER print_message
+AFTER INSERT ON dept
+BEGIN
+    DBMS_OUTPUT.PUT_LINE('dept 테이블에 정상적으로 데이터가 추가되었습니다.');
+END;
+
+트리거를 생성한 후 dept 테이블에 데이터를 추가하면 등록된 트리거가 동작하면서
+'dept 테이블에 정상적으로 데이터가 추가되었습니다.'를 출력함
+
+INSERT INTO dept VALUES(70, 'MARKETING', 'MIAMI');
+
+
+book 테이블에 데이터를 저장하면 book_log 테이블에 같은 데이터를 저장하는 트리거 생성
+
+CREATE TABLE book_log(
+bookid_lo NUMBER,
+bookname_lo VARCHAR2(60),
+publisher_lo VARCHAR2(60),
+price_lo NUMBER
+);
+
+CREATE OR REPLACE TRIGGER afterinsertbook
+--FOR EACH ROW는 매번 추가되는 행의 수만큼 TRIGGER가 발생함
+AFTER INSERT ON book FOR EACH ROW
+BEGIN
+    INSERT INTO book_log
+    -- :new.컬럼이름의 형식으로 추가, 수정할 때 해당 컬럼의 새로운 값을 저장함
+    VALUES (:new.bookid, :new.bookname, :new.publisher, :new.price);
+    COMMIT;
+    DBMS_OUTPUT.PUT_LINE('삽입한 데이터를 book_log 테이블에 백업했습니다.');
+    
+    EXCEPTION WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('ERRORS!');
+        ROLLBACK;
+END;
+
+SELECT * FROM book;
+
+INSERT INTO book VALUES (7, '미국 여행', '아메리카 미디어', 10000);
