@@ -922,7 +922,7 @@ BEGIN
     VALUES (:new.bookid, :new.bookname, :new.publisher, :new.price);
     COMMIT;
     DBMS_OUTPUT.PUT_LINE('삽입한 데이터를 book_log 테이블에 백업했습니다.');
-    
+     
     EXCEPTION WHEN OTHERS THEN
         DBMS_OUTPUT.PUT_LINE('ERRORS!');
         ROLLBACK;
